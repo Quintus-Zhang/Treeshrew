@@ -373,12 +373,226 @@ obj['a']
 # # Summarizing and Computing Descriptive Statistics
 # #==============================================================================
 #==============================================================================
+df = DataFrame([[1.4, np.nan], [7.1, -4.5], [np.nan, np.nan], [0.75, -1.3]],
+                index=['a', 'b', 'c', 'd'], 
+                columns=['one', 'two'])
+df.sum()
+df.sum(axis=1)
+df.mean(axis=1, skipna=False)
+
+# return the index value of the max
+df.idxmax()
+df.idxmax(axis=1)
+
+#  produces multiple summary statistics in one shot
+# dataframe
+df.describe()
+# series
+obj = Series(['a', 'a', 'b', 'c'] * 4)
+obj.describe()
 
 
+#==============================================================================
+# Correlation and Covariance
+#==============================================================================
+# corr() and cov()
+# series
+returns.MSFT.corr(returns.IBM)
+# df
+# return a full correlation or covariance matrix as a DataFrame
+df.corr()
+df.cov()
+
+# corrwith()
+# compute pairwise correlations between a DataFrame’s columns or rows with another Series or DataFrame
+returns.corrwith(returns.IBM)
 
 
+#==============================================================================
+# Unique Values, Value Counts, and Membership
+#==============================================================================
+obj = Series(['c', 'a', 'd', 'a', 'a', 'b', 'b', 'c', 'c'])
+
+# unique()
+uniques = obj.unique()
+
+# value_counts()
+obj.value_counts()
+pd.value_counts(obj.values, sort=False)
+
+# isin()
+# can be very useful in filtering a data set down to a subset of values in a Series or 
+# column in a DataFram
+mask = obj.isin(['b', 'c'])
+mask
+obj[mask]
+
+# compute a histogram on multiple related columns
+data = DataFrame({'Qu1': [1, 3, 4, 3, 4], 
+                  'Qu2': [2, 3, 1, 2, 3], 
+                  'Qu3': [1, 5, 2, 4, 4]})
+data
+result = data.apply(pd.value_counts).fillna(0)
 
 
+#==============================================================================
+# #==============================================================================
+# # Handling Missing Data
+# #==============================================================================
+#==============================================================================
+string_data = Series(['aardvark', 'artichoke', np.nan, 'avocado'])
+string_data
+string_data.isnull()
+# The built-in Python None value is also treated as NA in object arrays
+string_data[0] = None
+
+# related methods
+dropna()
+fillna()
+isnull()
+notnull()
+
+#==============================================================================
+# Filtering Out Missing Data
+#==============================================================================
+from numpy import nan as NA
+# Series
+data = Series([1, NA, 3.5, NA, 7])
+# 1
+data.dropna()
+# 2
+data[data.notnull()]
+
+# Dataframe
+data = DataFrame([[1., 6.5, 3.], [1., NA, NA], [NA, NA, NA], [NA, 6.5, 3.]])
+# dropna by default drops any row containing a missing value
+cleaned = data.dropna()
+# Passing how='all' will only drop rows that are all NA:
+data.dropna(how='all')
+# dropping columns: axis = 1
+data[4] = NA
+data.dropna(axis=1, how='all')
+
+# keep only rows containing a certain number of observations
+df = DataFrame(np.random.randn(7, 3))
+df.ix[:4, 1] = NA
+df.ix[:2, 2] = NA
+df
+df.dropna(thresh=3)
 
 
+#==============================================================================
+# Filling in Missing Data
+#==============================================================================
+# Calling fillna with a constant replaces missing values with that value
+df.fillna(0)
+# Calling fillna with a dict you can use a different fill value for each column
+df.fillna({1: 0.5, 3: -1})
+# inplace
+_ = df.fillna(0, inplace=True)
+
+# forward fill
+df = DataFrame(np.random.randn(6, 3))
+df.ix[2:, 1] = NA; df.ix[4:, 2] = NA
+df
+df.fillna(method='ffill')
+df.fillna(method='ffill', limit=2)
+
+# pass the mean or median value of a Series
+data = Series([1., NA, 3.5, NA, 7])
+data.fillna(data.mean())
+
+
+#==============================================================================
+# #==============================================================================
+# # Hierarchical Indexing
+# #==============================================================================
+#==============================================================================
+data = Series(np.random.randn(10),
+              index=[['a', 'a', 'a', 'b', 'b', 'b', 'c', 'c', 'd', 'd'], 
+                     [1, 2, 3, 1, 2, 3, 1, 2, 2, 3]])
+data
+data.index
+# partial indexing
+data['b']
+data['b':'c']
+data.ix[['b', 'd']]
+data[:, 2]
+
+# rearranged into a DataFrame using its unstack method
+data.unstack()
+# stack
+data.unstack().stack()
+
+# With a DataFrame, either axis can have a hierarchical index
+frame = DataFrame(np.arange(12).reshape((4, 3)), 
+                  index=[['a', 'a', 'b', 'b'], [1, 2, 1, 2]], 
+                  columns=[['Ohio', 'Ohio', 'Colorado'], ['Green', 'Red', 'Green']])
+frame
+# The hierarchical levels can have names
+frame.index.names = ['key1', 'key2']
+frame.columns.names = ['state', 'color']
+frame
+
+# partial column indexing
+frame['Ohio']
+
+
+#==============================================================================
+# Reordering and Sorting Levels
+#==============================================================================
+# The swaplevel takes two level numbers or names and returns a new object with the 
+# levels interchanged (but the data is otherwise unaltered)
+frame.swaplevel('key1', 'key2')
+
+# sortlevel
+frame.sortlevel('key2')
+frame.sortlevel(1)
+# swap level 0 and 1, then sort the data according to level 0
+frame.swaplevel(0, 1).sortlevel(0)
+
+
+#==============================================================================
+# Summary Statistics by Level
+#==============================================================================
+# Many descriptive and summary statistics on DataFrame and Series have a level option 
+# in which you can specify the level you want to sum by on a particular axis.
+frame.sum(level='key2')
+frame.sum(level='color', axis=1)
+
+
+#==============================================================================
+# Using a DataFrame’s Columns
+#==============================================================================
+frame = DataFrame({'a': range(7), 
+                   'b': range(7, 0, -1), 
+                   'c': ['one', 'one', 'one', 'two', 'two', 'two', 'two'], 
+                   'd': [0, 1, 2, 0, 1, 2, 3]})
+frame
+# by default columns are removed from the df
+frame2 = frame.set_index(['c', 'd'])
+frame2
+# keep the columns set to be the index
+frame.set_index(['c', 'd'], drop=False)
+
+# reset_index
+# does the opposite of set_index
+frame2.reset_index()
+
+
+#==============================================================================
+# #==============================================================================
+# # Other pandas Topics
+# #==============================================================================
+#==============================================================================
+
+#==============================================================================
+# Integer Indexing
+#==============================================================================
+# ? 
+
+#==============================================================================
+# Panel Data
+#==============================================================================
+# skip
 
